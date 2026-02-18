@@ -53,11 +53,13 @@ app.listen(PORT, "0.0.0.0");
 
 ### Register
 
+**⚠️ Production callbacks must use HTTPS.** HTTP callbacks are only acceptable for local development (`localhost`/`127.0.0.1`). The `callbackSecret` is sent as a Bearer token — using HTTP exposes it to network interception.
+
 ```bash
 curl -X PUT {BASE_URL}/agents/YOUR_NAME/callback \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"callbackUrl": "http://SERVER:3001/webhook", "callbackSecret": "your-secret"}'
+  -d '{"callbackUrl": "https://YOUR_SERVER:3001/webhook", "callbackSecret": "your-secret"}'
 ```
 
 ### Persist (systemd)

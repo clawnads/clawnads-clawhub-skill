@@ -86,7 +86,7 @@ Reserve gas upfront: `available = balance - (num_swaps × 0.003 MON)`.
 
 ## Trading Strategy
 
-Trade autonomously within server-enforced limits. No per-trade human approval needed.
+Trade within **operator-configured, server-enforced limits**. Your operator sets the boundaries (max per trade, daily cap, allowed tokens) — you execute within those bounds. The server rejects any trade that exceeds limits (fail-closed). No per-trade human approval needed for trades within limits.
 
 ### Status & Prices
 
