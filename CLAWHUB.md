@@ -286,6 +286,66 @@ To avoid flags on publish:
 - **Add operator approval language** before any financial or destructive actions
 - **Mark operator-side code clearly** — if your skill includes example infra code, label it as "not executed by the agent"
 
+### Pre-Publish Checklist
+
+Run these checks **before** publishing to catch issues before ClawHub's security scan flags them.
+
+#### 1. Static Analysis (replicate ClawHub's content scan)
+
+```bash
+# Check for exec() with string interpolation (shell injection risk)
+grep -rn 'exec(`\|exec("' skill/clawnads/ && echo "FAIL: Use execFile() instead" || echo "PASS: No exec() found"
+
+# Check for undeclared env vars (compare references against metadata.requires.env)
+DECLARED=$(grep -oP 'env.*?\[.*?\]' skill/clawnads/SKILL.md | grep -oP '"[^"]*"' | tr -d '"' | sort)
+REFERENCED=$(grep -rhoP '\$[A-Z_]+' skill/clawnads/ | sort -u | sed 's/^\$//')
+echo "Declared: $DECLARED"
+echo "Referenced: $REFERENCED"
+# Any referenced but not declared = potential flag (except operator-side vars clearly labeled)
+
+# Check for URL derivation from untrusted source
+grep -rn 'BASE_URL.*=.*fetched\|BASE_URL.*=.*from.*URL\|BASE_URL.*=.*minus' skill/clawnads/ && echo "FAIL: Hardcode official URLs" || echo "PASS"
+
+# Check for operator approval language near financial actions
+grep -rn 'send.*MON\|send.*funds\|execute.*trade\|financial' skill/clawnads/ | grep -v 'operator approval\|human approval\|get.*approval' && echo "WARN: Financial actions may lack approval gates" || echo "PASS"
+```
+
+#### 2. VirusTotal Pre-Check
+
+ClawHub submits the skill package to VirusTotal. Run it yourself first:
+
+```bash
+# Create the same archive ClawHub would analyze
+cd skill/clawnads && zip -r /tmp/clawnads-skill.zip . && cd -
+
+# Get SHA-256 hash
+sha256sum /tmp/clawnads-skill.zip
+
+# Submit to VirusTotal (requires VT API key)
+# Option A: Upload via API
+curl -s --request POST \
+  --url https://www.virustotal.com/api/v3/files \
+  --header "x-apikey: $VT_API_KEY" \
+  --form file=@/tmp/clawnads-skill.zip
+
+# Option B: Check hash if previously scanned
+curl -s --request GET \
+  --url "https://www.virustotal.com/api/v3/files/$(sha256sum /tmp/clawnads-skill.zip | cut -d' ' -f1)" \
+  --header "x-apikey: $VT_API_KEY" | python3 -m json.tool | grep -A5 '"stats"'
+
+# Option C: Upload manually at https://www.virustotal.com/gui/home/upload
+```
+
+The free VirusTotal API allows 4 lookups/min and 500/day. A clean result before publishing means ClawHub's scan will pass faster.
+
+#### 3. OpenClaw Validator
+
+```bash
+python3 ~/.npm-global/lib/node_modules/openclaw/skills/skill-creator/scripts/quick_validate.py ./skill/clawnads/
+```
+
+Checks: frontmatter format, required fields, naming conventions, description length.
+
 ### Publish
 
 ```bash
